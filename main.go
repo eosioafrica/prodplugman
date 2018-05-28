@@ -11,6 +11,9 @@ import (
 	"time"
 
 	"github.com/kardianos/service"
+	"github.com/sirupsen/logrus"
+	"github.com/eosioafrica/prodplugman/consul"
+	"github.com/hashicorp/consul/api"
 )
 
 var logger service.Logger
@@ -22,10 +25,12 @@ type program struct {
 }
 
 func (p *program) Start(s service.Service) error {
+
+	logrus.Info("Starting producer plugin manager.")
 	if service.Interactive() {
-		logger.Info("Running in terminal.")
+		logrus.Info("Running in terminal.")
 	} else {
-		logger.Info("Running under service manager.")
+		logrus.Info("Running under service manager.")
 	}
 	p.exit = make(chan struct{})
 
@@ -34,12 +39,25 @@ func (p *program) Start(s service.Service) error {
 	return nil
 }
 func (p *program) run() error {
-	logger.Infof("I'm running %v.", service.Platform())
-	ticker := time.NewTicker(2 * time.Second)
+	logrus.Infof("I'm running %v.", service.Platform())
+	ticker := time.NewTicker(5 * time.Second) // Pull this from consul???
+
+	//s, err := consul.New("", *ttl)
+
 	for {
 		select {
 		case tm := <-ticker.C:
-			logger.Infof("Still running at %v...", tm)
+
+			// Read current state
+			//s.ProductionState()
+
+			// Get value from consul
+
+			// If different request lock from consul
+
+			// If you get lock, update production status
+
+			logrus.Infof("Still running at %v...", tm)
 		case <-p.exit:
 			ticker.Stop()
 			return nil
@@ -48,7 +66,7 @@ func (p *program) run() error {
 }
 func (p *program) Stop(s service.Service) error {
 	// Any work in Stop should be quick, usually a few seconds at most.
-	logger.Info("I'm Stopping!")
+	logrus.Info("I'm Stopping!")
 	close(p.exit)
 	return nil
 }
@@ -64,9 +82,9 @@ func main() {
 	flag.Parse()
 
 	svcConfig := &service.Config{
-		Name:        "GoServiceExampleLogging",
-		DisplayName: "Go Service Example for Logging",
-		Description: "This is an example Go service that outputs log messages.",
+		Name:        "ProducerPluginManager",
+		DisplayName: "A systemd service that manages the state of producer_plugin",
+		Description: "Uses producer plugin api to pause or restart block production on nodeos.",
 	}
 
 	prg := &program{}
@@ -101,4 +119,21 @@ func main() {
 	if err != nil {
 		logger.Error(err)
 	}
+}
+
+func ServiceHandler()  {
+
+	ttl := flag.Duration("ttl", time.Second*15, "Service TTL check duration")
+	c, _ := api.NewClient(api.DefaultConfig())
+
+	s, err := consul.New(c, "", *ttl)
+
+	s.ProductionState()
+
+	if s.PPMan.Err != nil {
+
+		return
+	}
+
+	s.
 }
